@@ -6,9 +6,11 @@ scalaVersion := "2.11.8"
 
 lazy val hbcVersion = "2.2.0"
 lazy val slf4jVersion = "1.7.21"
+lazy val typeSafeConfigVersion = "1.3.0"
 
 libraryDependencies ++= Seq(
   "com.twitter" % "hbc-core" % hbcVersion,
-  "org.slf4j" % "slf4j-simple" % slf4jVersion
+  "org.slf4j" % "slf4j-simple" % slf4jVersion,
+  "com.typesafe" % "config" % typeSafeConfigVersion
 )
     
