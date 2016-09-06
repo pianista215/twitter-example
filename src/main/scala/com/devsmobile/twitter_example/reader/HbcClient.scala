@@ -22,10 +22,8 @@ class HbcClient extends TwitterClient {
 
   private def setup: Unit = {
     /** Set up your blocking queues: Be sure to size these properly based on expected TPS of your stream */
-    val msgQueue = new LinkedBlockingQueue[String](100000)
+    val tweetQueue = new LinkedBlockingQueue[String](100000)
 
-    /** Declare the host you want to connect to, the endpoint, and authentication (basic auth or oauth) */
-    // Optional: set up some followings and track terms
     val terms: java.util.List[String] = config.getStringList("reader.terms")
 
     val hosebirdHosts = new HttpHosts(Constants.STREAM_HOST)
@@ -48,18 +46,20 @@ class HbcClient extends TwitterClient {
       .hosts(hosebirdHosts)
       .authentication(hosebirdAuth)
       .endpoint(hosebirdEndpoint)
-      .processor(new StringDelimitedProcessor(msgQueue)).build()
+      .processor(new StringDelimitedProcessor(tweetQueue)).build()
 
     Future {
-      //TODO
-      // on a different thread, or multiple different threads....
       Thread.sleep(4000)
 
 
       while (!hosebirdClient.isDone()) {
-        val msg = msgQueue.take()
-        println(s"Leido $msg")
+        println("Waiting")
+        val msg = tweetQueue.take()
+        val tweet = Tweet(msg)
+        println(s"Read $tweet")
       }
+
+      println("Done")
 
     }
 
