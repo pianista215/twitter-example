@@ -1,8 +1,10 @@
 package com.devsmobile.twitter_example.elasticsearch
+import java.util.Date
+
 import com.devsmobile.twitter_example.common.TwitterExConfig
 import com.devsmobile.twitter_example.reader.Tweet
 import com.sksamuel.elastic4s.ElasticDsl._
-import com.sksamuel.elastic4s.mappings.FieldType.{LongType, StringType}
+import com.sksamuel.elastic4s.mappings.FieldType.{DateType, LongType, StringType}
 import com.sksamuel.elastic4s.{ElasticClient, ElasticsearchClientUri}
 import org.elasticsearch.common.settings.Settings
 
@@ -31,7 +33,7 @@ object ESClient extends TweetSaver {
       create index indexName mappings (
         mappingName fields (
           textField typed StringType,
-          timestampField typed LongType
+          timestampField typed DateType
           )
         )
     }
@@ -41,7 +43,7 @@ object ESClient extends TweetSaver {
   override def save(tweet: Tweet): Future[Unit] = client.execute {
     index into indexName / mappingName fields (
       textField -> tweet.msg,
-      timestampField -> tweet.timestamp
+      timestampField -> new Date(tweet.timestamp)
       )
   } map { result => println(s"Saved $tweet") }
 
