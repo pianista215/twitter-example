@@ -3,6 +3,7 @@ package com.devsmobile.twitter_example.reader
 import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue}
 
 import com.devsmobile.twitter_example.common.TwitterExConfig
+import com.devsmobile.twitter_example.elasticsearch.ESClient
 import com.twitter.hbc.ClientBuilder
 import com.twitter.hbc.core.endpoint.StatusesFilterEndpoint
 import com.twitter.hbc.core.{Constants, Hosts, HttpHosts}
@@ -18,21 +19,21 @@ import scala.concurrent.ExecutionContext.Implicits.global
   */
 class HbcClient extends TwitterClient {
 
-  val config = TwitterExConfig.config
+  val config = TwitterExConfig.config.getConfig("reader")
 
   private def setup: Unit = {
     /** Set up your blocking queues: Be sure to size these properly based on expected TPS of your stream */
     val tweetQueue = new LinkedBlockingQueue[String](100000)
 
-    val terms: java.util.List[String] = config.getStringList("reader.terms")
+    val terms: java.util.List[String] = config.getStringList("terms")
 
     val hosebirdHosts = new HttpHosts(Constants.STREAM_HOST)
     val hosebirdEndpoint = new StatusesFilterEndpoint().trackTerms(terms)
 
-    val consumerKey = config.getString("reader.consumerkey").trim
-    val consumerSecret = config.getString("reader.consumersecret").trim
-    val token = config.getString("reader.token").trim
-    val tokenSecret = config.getString("reader.tokensecret").trim
+    val consumerKey = config.getString("consumerkey").trim
+    val consumerSecret = config.getString("consumersecret").trim
+    val token = config.getString("token").trim
+    val tokenSecret = config.getString("tokensecret").trim
 
     //TODO: Logger
     println(s"Consumer key : $consumerKey")
@@ -57,6 +58,7 @@ class HbcClient extends TwitterClient {
         val msg = tweetQueue.take()
         parseTweet(msg) map { tweet =>
           println(s"Tweet: $tweet")
+          ESClient.save(tweet)
         }
       }
 
