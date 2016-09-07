@@ -55,8 +55,9 @@ class HbcClient extends TwitterClient {
       while (!hosebirdClient.isDone()) {
         println("Waiting")
         val msg = tweetQueue.take()
-        val tweet = Tweet(msg)
-        println(s"Read $tweet")
+        parseTweet(msg) map { tweet =>
+          println(s"Tweet: $tweet")
+        }
       }
 
       println("Done")
