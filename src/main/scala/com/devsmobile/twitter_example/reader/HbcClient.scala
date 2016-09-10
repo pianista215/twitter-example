@@ -27,13 +27,15 @@ abstract class HbcClient extends LazyLogging {
 
   val config = TwitterExConfig.config.getConfig("reader")
 
-  def startListeningFor(terms: List[String]): Unit =
-    (start _).tupled(setup(terms))
+  def startListeningFor(terms: List[String]): (BasicClient, LinkedBlockingQueue[String]) = {
+    val (client, queue) = setup(terms)
+    start(client)
+    (client,queue)
+  }
 
-  protected def start(hosebirdClient: BasicClient, queue: LinkedBlockingQueue[String]): BasicClient = {
+  protected def start(hosebirdClient: BasicClient): Unit = {
     hosebirdClient.connect();
     logger.info("Connected to Twitter")
-    hosebirdClient
   }
 
   def stop(hosebirdClient: BasicClient): Unit =
@@ -66,24 +68,6 @@ abstract class HbcClient extends LazyLogging {
       .processor(new StringDelimitedProcessor(tweetQueue)).build()
 
     (hosebirdClient, tweetQueue)
-
-    /*Future { //To Actor??????
-      Thread.sleep(4000)
-
-
-      while (!hosebirdClient.isDone()) {
-        logger.debug("Waiting")
-        val msg = tweetQueue.take()
-        parseTweet(msg) map { tweet =>
-          logger.debug(s"Tweet: $tweet")
-          ESClient.save(tweet)
-        }
-      }
-
-      logger.debug("Done")
-
-    }*/
-
   }
 
 }
