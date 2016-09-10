@@ -1,11 +1,9 @@
-package com.devsmobile.twitter_example.reader
+package com.devsmobile.twitter_example.actors
 
 import akka.actor.{Actor, Props}
-import akka.actor.Actor.Receive
-import com.devsmobile.twitter_example.reader.TwitterReader.Start
+import com.devsmobile.twitter_example.actors.TwitterReader.Start
+import com.devsmobile.twitter_example.reader.HbcClient
 import com.typesafe.scalalogging.LazyLogging
-import org.json4s.JsonAST.{JObject, JString}
-import org.json4s.jackson.JsonMethods._
 
 /**
   * Created by pianista on 31/08/16.

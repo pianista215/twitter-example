@@ -1,7 +1,7 @@
 package com.devsmobile.twitter_example
 
 import akka.actor.{ActorSystem, Props}
-import com.devsmobile.twitter_example.reader.TwitterReader
+import com.devsmobile.twitter_example.actors.TwitterReader
 import com.typesafe.scalalogging.LazyLogging
 
 /**

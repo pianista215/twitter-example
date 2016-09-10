@@ -1,13 +1,14 @@
-package com.devsmobile.twitter_example.reader
+package com.devsmobile.twitter_example.actors
 
 import java.util.concurrent.LinkedBlockingQueue
 
 import akka.actor.Actor
-import akka.actor.Actor.Receive
-import com.devsmobile.twitter_example.reader.QueueConsumer.{ContinueConsumingFrom, StartConsumingFrom}
+import com.devsmobile.twitter_example.actors.QueueConsumer.{ContinueConsumingFrom, StartConsumingFrom}
+import com.devsmobile.twitter_example.reader.Tweet
 import com.typesafe.scalalogging.LazyLogging
 import org.json4s.JsonAST.{JObject, JString}
 import org.json4s.jackson.JsonMethods._
+
 import scala.concurrent.duration._
 /**
   * Created by usarasola on 10/09/16.
@@ -18,6 +19,8 @@ class QueueConsumer extends Actor with LazyLogging {
 
   override def receive: Receive = {
     case StartConsumingFrom(queue) =>
+      logger.info("Creating child actors for generic, coach, president and players")
+
       logger.info("Changing to state consuming")
       self ! ContinueConsumingFrom(queue)
       context.become(consuming)
