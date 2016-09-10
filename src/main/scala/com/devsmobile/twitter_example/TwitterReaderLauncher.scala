@@ -1,21 +1,18 @@
 package com.devsmobile.twitter_example
 
-import com.devsmobile.twitter_example.reader.{HbcClient, TwitterClient}
-
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
-import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.{ActorSystem, Props}
+import com.devsmobile.twitter_example.reader.TwitterReader
+import com.typesafe.scalalogging.LazyLogging
 
 /**
   * Created by pianista on 31/08/16.
   */
-object TwitterReaderLauncher extends App {
+object TwitterReaderLauncher extends App with LazyLogging {
 
-  val client: TwitterClient = new HbcClient
+  logger.info("Starting Actor System and Actors")
+  val system = ActorSystem("MyActorSystem")
 
-  client.startListeningFor("TODO")
-  println("Launched. Press something to close.")
-
-  scala.io.StdIn.readLine()
+  val twitterReader = system.actorOf(Props[TwitterReader], name = "initialActor")
+  twitterReader ! TwitterReader.Start(List("Barcelona"))
 
 }

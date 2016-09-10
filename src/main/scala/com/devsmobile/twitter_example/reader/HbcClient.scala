@@ -2,6 +2,8 @@ package com.devsmobile.twitter_example.reader
 
 import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue}
 
+import akka.actor.Actor
+import akka.actor.Actor.Receive
 import com.devsmobile.twitter_example.common.TwitterExConfig
 import com.devsmobile.twitter_example.elasticsearch.ESClient
 import com.twitter.hbc.ClientBuilder
@@ -9,7 +11,11 @@ import com.twitter.hbc.core.endpoint.StatusesFilterEndpoint
 import com.twitter.hbc.core.{Constants, Hosts, HttpHosts}
 import com.twitter.hbc.core.event.Event
 import com.twitter.hbc.core.processor.StringDelimitedProcessor
+import com.twitter.hbc.httpclient.BasicClient
 import com.twitter.hbc.httpclient.auth.{Authentication, OAuth1}
+import com.typesafe.scalalogging.LazyLogging
+import org.json4s.JsonAST.{JObject, JString}
+import org.json4s.jackson.JsonMethods._
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -17,29 +23,39 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
   * Created by pianista on 31/08/16.
   */
-class HbcClient extends TwitterClient {
+abstract class HbcClient extends LazyLogging {
 
   val config = TwitterExConfig.config.getConfig("reader")
 
-  private def setup: Unit = {
-    /** Set up your blocking queues: Be sure to size these properly based on expected TPS of your stream */
+  def startListeningFor(terms: List[String]): Unit =
+    (start _).tupled(setup(terms))
+
+  protected def start(hosebirdClient: BasicClient, queue: LinkedBlockingQueue[String]): BasicClient = {
+    hosebirdClient.connect();
+    logger.info("Connected to Twitter")
+    hosebirdClient
+  }
+
+  def stop(hosebirdClient: BasicClient): Unit =
+    hosebirdClient.stop()
+
+  protected def setup(terms: List[String]): (BasicClient, LinkedBlockingQueue[String]) = {
     val tweetQueue = new LinkedBlockingQueue[String](100000)
 
-    val terms: java.util.List[String] = config.getStringList("terms")
+    import collection.JavaConverters._
 
     val hosebirdHosts = new HttpHosts(Constants.STREAM_HOST)
-    val hosebirdEndpoint = new StatusesFilterEndpoint().trackTerms(terms)
+    val hosebirdEndpoint = new StatusesFilterEndpoint().trackTerms(terms asJava)
 
     val consumerKey = config.getString("consumerkey").trim
     val consumerSecret = config.getString("consumersecret").trim
     val token = config.getString("token").trim
     val tokenSecret = config.getString("tokensecret").trim
 
-    //TODO: Logger
-    println(s"Consumer key : $consumerKey")
-    println(s"Consumer secret : $consumerSecret")
-    println(s"Token : $token")
-    println(s"Token secret : $tokenSecret")
+    logger.info(s"Consumer key : $consumerKey")
+    logger.info(s"Consumer secret : $consumerSecret")
+    logger.info(s"Token : $token")
+    logger.info(s"Token secret : $tokenSecret")
 
     val hosebirdAuth = new OAuth1(consumerKey, consumerSecret, token, tokenSecret)
 
@@ -49,32 +65,25 @@ class HbcClient extends TwitterClient {
       .endpoint(hosebirdEndpoint)
       .processor(new StringDelimitedProcessor(tweetQueue)).build()
 
-    Future {
+    (hosebirdClient, tweetQueue)
+
+    /*Future { //To Actor??????
       Thread.sleep(4000)
 
 
       while (!hosebirdClient.isDone()) {
-        println("Waiting")
+        logger.debug("Waiting")
         val msg = tweetQueue.take()
         parseTweet(msg) map { tweet =>
-          println(s"Tweet: $tweet")
+          logger.debug(s"Tweet: $tweet")
           ESClient.save(tweet)
         }
       }
 
-      println("Done")
+      logger.debug("Done")
 
-    }
+    }*/
 
-    // Attempts to establish a connection.
-    hosebirdClient.connect();
-    println("Connected")
   }
-
-  override def startListeningFor(term: String): Unit = //TODO
-    setup
-
-  override def stop(): Unit = ???
-
 
 }

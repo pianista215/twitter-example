@@ -6,6 +6,7 @@ import com.devsmobile.twitter_example.reader.Tweet
 import com.sksamuel.elastic4s.ElasticDsl._
 import com.sksamuel.elastic4s.mappings.FieldType.{DateType, LongType, StringType}
 import com.sksamuel.elastic4s.{ElasticClient, ElasticsearchClientUri}
+import com.typesafe.scalalogging.LazyLogging
 import org.elasticsearch.common.settings.Settings
 
 import scala.concurrent.Future
@@ -14,7 +15,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
   * Created by pianista on 7/09/16.
   */
-object ESClient extends TweetSaver {
+object ESClient extends TweetSaver with LazyLogging{
 
   val config = TwitterExConfig.config.getConfig("elastic")
 
@@ -45,6 +46,6 @@ object ESClient extends TweetSaver {
       textField -> tweet.msg,
       timestampField -> new Date(tweet.timestamp)
       )
-  } map { result => println(s"Saved $tweet") }
+  } map { result => logger.debug(s"Saved $tweet") }
 
 }
