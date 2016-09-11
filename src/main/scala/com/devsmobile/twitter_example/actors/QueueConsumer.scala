@@ -2,8 +2,10 @@ package com.devsmobile.twitter_example.actors
 
 import java.util.concurrent.LinkedBlockingQueue
 
-import akka.actor.Actor
+import akka.actor.{Actor, ActorRef, Props}
 import com.devsmobile.twitter_example.actors.QueueConsumer.{ContinueConsumingFrom, StartConsumingFrom}
+import com.devsmobile.twitter_example.actors.team.{Recolector, TeamRecolector}
+import com.devsmobile.twitter_example.common.{Team, TwitterExUtils}
 import com.devsmobile.twitter_example.reader.Tweet
 import com.typesafe.scalalogging.LazyLogging
 import org.json4s.JsonAST.{JObject, JString}
@@ -18,45 +20,46 @@ class QueueConsumer extends Actor with LazyLogging {
   import context._
 
   override def receive: Receive = {
-    case StartConsumingFrom(queue) =>
+    case StartConsumingFrom(queue,team) =>
       logger.info("Creating child actors for generic, coach, president and players")
+      val teamRecolector = context.system.actorOf(Props(classOf[TeamRecolector], team), "TeamRecolector")
 
+      val recolectors = List(teamRecolector)
       logger.info("Changing to state consuming")
-      self ! ContinueConsumingFrom(queue)
+      self ! ContinueConsumingFrom(queue,recolectors)
       context.become(consuming)
   }
 
   private def consuming: Receive = {
-    case ContinueConsumingFrom(queue) =>
+    case ContinueConsumingFrom(queue, recolectors) =>
       if(queue.isEmpty) { //Wait until some tweet arrives
         logger.info("Empty queue, waiting to messages")
-        context.system.scheduler.scheduleOnce(1000 milliseconds, self, ContinueConsumingFrom(queue))
+        context.system.scheduler.scheduleOnce(1000 milliseconds, self, ContinueConsumingFrom(queue, recolectors))
       } else {
         val rawTweet = queue.take()
         parseTweet(rawTweet) map { tweet =>
-          logger.info(s"Tweet: $tweet")
+          logger.debug(s"Tweet: $tweet")
+
+          if(isFootballTweet(tweet)) {
+            logger.debug(s"It's a football tweet: $tweet")
+            recolectors map (_ ! Recolector.TweetReceived(tweet))
+          }
         }
-        self ! ContinueConsumingFrom(queue)
+        self ! ContinueConsumingFrom(queue, recolectors)
       }
   }
 
 
-  /*Future { //To Actor??????
-      Thread.sleep(4000)
+  /**
+    * Check if the tweet is related to football
+    *
+    * @return
+    */
+  private def isFootballTweet(tweet: Tweet): Boolean =
+    TwitterExUtils.genericFootballTerms.view exists { term =>
+      TwitterExUtils.withoutDiacriticsToLower(tweet.msg).contains(TwitterExUtils.withoutDiacriticsToLower(term))
+    }
 
-
-      while (!hosebirdClient.isDone()) {
-        logger.debug("Waiting")
-        val msg = tweetQueue.take()
-        parseTweet(msg) map { tweet =>
-          logger.debug(s"Tweet: $tweet")
-          ESClient.save(tweet)
-        }
-      }
-
-      logger.debug("Done")
-
-    }*/
 
 
   protected def parseTweet(json: String): Option[Tweet] = {
@@ -71,8 +74,8 @@ class QueueConsumer extends Actor with LazyLogging {
 
 object QueueConsumer {
   //Receive mode
-  case class StartConsumingFrom(queue: LinkedBlockingQueue[String])
+  case class StartConsumingFrom(queue: LinkedBlockingQueue[String], team: Team)
 
   //Consuming mode
-  case class ContinueConsumingFrom(queue: LinkedBlockingQueue[String])
+  case class ContinueConsumingFrom(queue: LinkedBlockingQueue[String], recolectors : List[ActorRef])
 }

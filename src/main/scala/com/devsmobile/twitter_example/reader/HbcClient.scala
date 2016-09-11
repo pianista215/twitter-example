@@ -4,7 +4,7 @@ import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue}
 
 import akka.actor.Actor
 import akka.actor.Actor.Receive
-import com.devsmobile.twitter_example.common.TwitterExConfig
+import com.devsmobile.twitter_example.common.TwitterExUtils
 import com.devsmobile.twitter_example.elasticsearch.ESClient
 import com.twitter.hbc.ClientBuilder
 import com.twitter.hbc.core.endpoint.StatusesFilterEndpoint
@@ -25,7 +25,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
   */
 abstract class HbcClient extends LazyLogging {
 
-  val config = TwitterExConfig.config.getConfig("reader")
+  val config = TwitterExUtils.config.getConfig("reader")
 
   def startListeningFor(terms: List[String]): (BasicClient, LinkedBlockingQueue[String]) = {
     val (client, queue) = setup(terms)

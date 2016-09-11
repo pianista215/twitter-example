@@ -1,7 +1,7 @@
 package com.devsmobile.twitter_example.elasticsearch
 import java.util.Date
 
-import com.devsmobile.twitter_example.common.TwitterExConfig
+import com.devsmobile.twitter_example.common.TwitterExUtils
 import com.devsmobile.twitter_example.reader.Tweet
 import com.sksamuel.elastic4s.ElasticDsl._
 import com.sksamuel.elastic4s.mappings.FieldType.{DateType, LongType, StringType}
@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
   */
 object ESClient extends TweetSaver with LazyLogging{
 
-  val config = TwitterExConfig.config.getConfig("elastic")
+  val config = TwitterExUtils.config.getConfig("elastic")
 
   val settings = Settings.settingsBuilder().put("cluster.name", config.getString("clustername")).build()
   val uri = ElasticsearchClientUri(config.getString("connectionurl"))
