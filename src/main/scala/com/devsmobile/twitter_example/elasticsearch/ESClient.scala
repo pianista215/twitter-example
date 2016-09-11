@@ -23,29 +23,48 @@ object ESClient extends TweetSaver with LazyLogging{
   val uri = ElasticsearchClientUri(config.getString("connectionurl"))
   private lazy val client = ElasticClient.transport(settings, uri)
 
-  val indexName = "tweets"
+  /*val indexName = "tweets"
   val mappingName = "tweet"
   val textField = "text"
+  val timestampField = "timestamp"*/
+
+  val indexName = "aggregations"
+  val mappingName = "aggregation"
+  val mainTeamField = "team"
+  val nameField = "name"
+  val countField = "count"
   val timestampField = "timestamp"
 
-  //Init
+  //Init //TODO: Check if index exists....
   {
     client.execute {
       create index indexName mappings (
         mappingName fields (
-          textField typed StringType,
+          mainTeamField typed StringType,
+          nameField typed StringType,
+          countField typed LongType,
           timestampField typed DateType
           )
         )
     }
   }
 
+  override def saveAggregation(team: String, name: String, count: Long, time: Date): Future[Unit] = client.execute {
+    index into indexName / mappingName fields (
+      mainTeamField -> team,
+      nameField -> name,
+      countField -> count,
+      timestampField -> time
+      )
+  } map { result => logger.debug(s"Saved aggregation for $name") }
 
-  override def save(tweet: Tweet): Future[Unit] = client.execute {
+
+  /*override def save(tweet: Tweet): Future[Unit] = client.execute {
     index into indexName / mappingName fields (
       textField -> tweet.msg,
       timestampField -> new Date(tweet.timestamp)
       )
-  } map { result => logger.debug(s"Saved $tweet") }
+  } map { result => logger.debug(s"Saved $tweet") }*/
+  //def save(tweet: Tweet): Future[Unit]
 
 }

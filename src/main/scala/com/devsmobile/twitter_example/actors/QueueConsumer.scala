@@ -4,7 +4,8 @@ import java.util.concurrent.LinkedBlockingQueue
 
 import akka.actor.{Actor, ActorRef, Props}
 import com.devsmobile.twitter_example.actors.QueueConsumer.{ContinueConsumingFrom, StartConsumingFrom}
-import com.devsmobile.twitter_example.actors.team.{Recolector, TeamRecolector}
+import com.devsmobile.twitter_example.actors.team.Recolector.StartAggregation
+import com.devsmobile.twitter_example.actors.team._
 import com.devsmobile.twitter_example.common.{Team, TwitterExUtils}
 import com.devsmobile.twitter_example.reader.Tweet
 import com.typesafe.scalalogging.LazyLogging
@@ -22,12 +23,21 @@ class QueueConsumer extends Actor with LazyLogging {
   override def receive: Receive = {
     case StartConsumingFrom(queue,team) =>
       logger.info("Creating child actors for generic, coach, president and players")
-      val teamRecolector = context.system.actorOf(Props(classOf[TeamRecolector], team), "TeamRecolector")
-
-      val recolectors = List(teamRecolector)
+      val recolectors = launchTeamRecolectors(team)
+      recolectors map (_ ! StartAggregation)
       logger.info("Changing to state consuming")
       self ! ContinueConsumingFrom(queue,recolectors)
       context.become(consuming)
+  }
+
+  private def launchTeamRecolectors(team: Team): List[ActorRef] = {
+    val teamRecolector = context.system.actorOf(Props(classOf[TeamRecolector], team), "TeamRecolector")
+    val presidentRecolector = context.system.actorOf(Props(classOf[PresidentRecolector], team.name, team.president), "PresidentRecolector")
+    val coachRecolector = context.system.actorOf(Props(classOf[CoachRecolector], team.name, team.coach), "CoachRecolector")
+    val playersRecolectors = team.players map { player =>
+      context.system.actorOf(Props(classOf[PlayerRecolector], team.name, player), player.name)
+    }
+    teamRecolector :: presidentRecolector :: coachRecolector :: playersRecolectors
   }
 
   private def consuming: Receive = {
