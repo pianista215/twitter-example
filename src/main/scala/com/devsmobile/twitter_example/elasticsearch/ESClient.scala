@@ -35,17 +35,22 @@ object ESClient extends TweetSaver with LazyLogging{
   val countField = "count"
   val timestampField = "timestamp"
 
-  //Init //TODO: Check if index exists....
   {
     client.execute {
-      create index indexName mappings (
-        mappingName fields (
-          mainTeamField typed StringType,
-          nameField typed StringType,
-          countField typed LongType,
-          timestampField typed DateType
-          )
-        )
+      index exists indexName
+    } map { existence =>
+      if(!existence.isExists){
+        client.execute {
+          create index indexName mappings (
+            mappingName fields (
+              mainTeamField typed StringType,
+              nameField typed StringType,
+              countField typed LongType,
+              timestampField typed DateType
+              )
+            )
+        }
+      }
     }
   }
 
