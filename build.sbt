@@ -12,6 +12,8 @@ lazy val elasticSearchConnector = "2.3.0"
 lazy val akkaVersion = "2.4.10"
 lazy val scalaLoggingVersion = "3.4.0"
 
+enablePlugins(DockerPlugin)
+
 libraryDependencies ++= Seq(
   "com.twitter" % "hbc-core" % hbcVersion,
 
