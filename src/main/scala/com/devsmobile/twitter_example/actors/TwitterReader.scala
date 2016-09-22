@@ -15,17 +15,17 @@ import collection.JavaConverters._
 class TwitterReader extends HbcClient with Actor with LazyLogging {
 
   override def receive: Receive = {
-    case Start(team) =>
-      val termsToListen: List[String] = TwitterExUtils.genericFootballTerms//team.fullTerms
+    case Start(teams) =>
+      val termsToListen: List[String] = TwitterExUtils.genericFootballTerms
       logger.info(s"Starting listening tweets for: ${termsToListen mkString(",")}.")
       val (client, queue) = startListeningFor(termsToListen)
       val queueConsumer = context.system.actorOf(Props[QueueConsumer], name = "queueConsumer")
-      queueConsumer ! QueueConsumer.StartConsumingFrom(queue,team)
+      queueConsumer ! QueueConsumer.StartConsumingFrom(queue,teams)
   }
 
 
 }
 
 object TwitterReader {
-  case class Start(team: Team)
+  case class Start(teams: List[Team])
 }

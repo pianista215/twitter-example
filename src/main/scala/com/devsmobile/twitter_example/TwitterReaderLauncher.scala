@@ -18,17 +18,28 @@ object TwitterReaderLauncher extends App with LazyLogging {
     logger.info("Starting Actor System and Actors")
     val system = ActorSystem("MyActorSystem")
 
-    val team = TwitterExUtils.config.getString("listener.team")
-    logger.info(s"Team: $team")
+    val teams: List[String] = TwitterExUtils.config.getStringList("listener.teams").asScala.toList
+    logger.info(s"Teams for load: $teams")
 
-    val teamTermsConfig = ConfigFactory.load(s"teams/$team.conf").getConfig("tw")
-    if (!teamTermsConfig.hasPath("general.name")) {
-      logger.error(s"Not found config for team: $team")
-      system.terminate()
-    } else {
-      val twitterReader = system.actorOf(Props[TwitterReader], name = "initialActor")
-      twitterReader ! TwitterReader.Start(parseTeam(teamTermsConfig))
+    val teamsConfigs: List[Config] = teams map { team =>
+      ConfigFactory.load(s"teams/$team.conf").getConfig("tw")
     }
+
+    //Check all are loaded correctly
+    teamsConfigs foreach { config =>
+      if (!config.hasPath("general.name")) {
+        logger.error(s"Config file empty. Terminating")
+        system.terminate()
+      }
+    }
+
+    val teamsParsed: List[Team] = teamsConfigs map { config =>
+      parseTeam(config)
+    }
+
+    val twitterReader = system.actorOf(Props[TwitterReader], name = "initialActor")
+    twitterReader ! TwitterReader.Start(teamsParsed)
+
   }
 
 

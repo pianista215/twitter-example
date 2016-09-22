@@ -21,24 +21,33 @@ class QueueConsumer extends Actor with LazyLogging {
   import context._
 
   override def receive: Receive = {
-    case StartConsumingFrom(queue,team) =>
-      logger.info("Creating child actors for generic, coach, president and players")
-      val recolectors = launchTeamRecolectors(team)
+    case StartConsumingFrom(queue,teams) =>
+      logger.info("Creating child actors for each team")
+      val recolectors: List[ActorRef] = teams map { team =>
+        createTeamActor(team)
+      }
       recolectors map (_ ! StartAggregation)
       logger.info("Changing to state consuming")
       self ! ContinueConsumingFrom(queue,recolectors)
       context.become(consuming)
   }
 
-  private def launchTeamRecolectors(team: Team): List[ActorRef] = {
-    val teamRecolector = context.system.actorOf(Props(classOf[TeamRecolector], team), "TeamRecolector")
-    val presidentRecolector = context.system.actorOf(Props(classOf[PresidentRecolector], team.name, team.president), "PresidentRecolector")
-    val coachRecolector = context.system.actorOf(Props(classOf[CoachRecolector], team.name, team.coach), "CoachRecolector")
-    val playersRecolectors = team.players map { player =>
-      context.system.actorOf(Props(classOf[PlayerRecolector], team.name, player), player.name)
-    }
-    teamRecolector :: presidentRecolector :: coachRecolector :: playersRecolectors
+  private def createTeamActor(team: Team): ActorRef =
+    context.system.actorOf(Props(classOf[TeamRecolector], team, childRecolectors(team)), s"${TwitterExUtils.withoutDiacritics(team.name)}_TeamRecolector")
+
+  private def childRecolectors(team: Team): List[ActorRef] =
+    presidentRecolector(team) :: coachRecolector(team) :: playersRecolectors(team)
+
+  private def presidentRecolector(team: Team): ActorRef =
+    context.system.actorOf(Props(classOf[PresidentRecolector], team.name, team.president), s"${TwitterExUtils.withoutDiacritics(team.name)}_PresidentRecolector")
+
+  private def coachRecolector(team: Team): ActorRef =
+    context.system.actorOf(Props(classOf[CoachRecolector], team.name, team.coach), s"${TwitterExUtils.withoutDiacritics(team.name)}_CoachRecolector")
+
+  private def playersRecolectors(team: Team): List[ActorRef] = team.players map { player =>
+    context.system.actorOf(Props(classOf[PlayerRecolector], team.name, player), s"${TwitterExUtils.withoutDiacritics(team.name)}_${TwitterExUtils.withoutDiacritics(player.name)}")
   }
+
 
   private def consuming: Receive = {
     case ContinueConsumingFrom(queue, recolectors) =>
@@ -84,7 +93,7 @@ class QueueConsumer extends Actor with LazyLogging {
 
 object QueueConsumer {
   //Receive mode
-  case class StartConsumingFrom(queue: LinkedBlockingQueue[String], team: Team)
+  case class StartConsumingFrom(queue: LinkedBlockingQueue[String], teams: List[Team])
 
   //Consuming mode
   case class ContinueConsumingFrom(queue: LinkedBlockingQueue[String], recolectors : List[ActorRef])

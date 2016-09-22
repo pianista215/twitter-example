@@ -17,14 +17,15 @@ object TwitterExUtils {
   def genericFootballTerms: List[String] =
     (config.getStringList("football.terms") asScala) toList
 
-
+  def withoutDiacritics(str: String): String =
+    Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
   /**
     * Remove non common characters from the string and convert úá to ua ...
     * @param str
     * @return
     */
   def withoutDiacriticsToLower(str: String): String =
-    Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "").toLowerCase
+    withoutDiacritics(str).toLowerCase
 
 
 }
